@@ -1,0 +1,7 @@
+__pycache__
+.idea
+Resources
+tts_models
+tts_wav
+tmp_tts.wav
+zero_shot_prompt.wav
