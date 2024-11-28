@@ -24,7 +24,7 @@ from threading import Thread, Event
 import pygame
 import wave
 import pyaudio
-from engine.asr import asr_infer
+from engine.asr import ASR
 
 def validate_wav(file_path):
     """验证 WAV 文件的完整性"""
@@ -63,6 +63,7 @@ def validate_wav(file_path):
 os.makedirs("./tts_wav", exist_ok=True)
 
 tts = TTS(base_path=r"tts_models/sherpa-onnx-vits-zh-child")
+asr = ASR(type="sherpa_onnx_sense_voice")
 RESOURCES_DIRECTORY = "Resources"
 
 
@@ -126,7 +127,7 @@ class DigitalHuman(QOpenGLWidget):
     def __init__(self) -> None:
         super().__init__()
         # 去掉了窗口的边框
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool)
+        #self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool)
         # 设置窗口的透明度
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
 
@@ -136,7 +137,7 @@ class DigitalHuman(QOpenGLWidget):
         self.setLayout(layout)
 
         self.setWindowTitle("数字人")
-        self.setGeometry(500, 500, 400, 400)  # 固定位置 (100, 100) 和大小 (400, 300)
+        self.setGeometry(500, 100, 400, 400)  # 固定位置 (500, 100) 和大小 (400, 400)
         # self.setGeometry(300, 300, 300, 100)
 
         self.a = 0
@@ -260,9 +261,9 @@ class Chat(QWidget):
         
         # 麦克风输入
         self.mic_layout = QVBoxLayout()
-        self.label = QLabel("点击按钮开始语音识别", self)
-        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.mic_layout.addWidget(self.label)
+        # self.label = QLabel("点击按钮开始语音识别", self)
+        # self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # self.mic_layout.addWidget(self.label)
         
         # 语音识别按钮 (麦克风图标)
         self.toggle_button = QPushButton("开始语音识别", self)
@@ -276,7 +277,7 @@ class Chat(QWidget):
         self.setLayout(self.chat_layout)
 
         self.setWindowTitle("chat")
-        self.setGeometry(100, 100, 400, 400)  # 固定位置 (100, 100) 和大小 (400, 300)
+        self.setGeometry(100, 100, 400, 400)  # 固定位置 (100, 100) 和大小 (400, 400)
 
         self.a = 0
         # self.resize(700, 1000)
@@ -285,10 +286,6 @@ class Chat(QWidget):
         self.p = pyaudio.PyAudio()
         self.is_listening = False
         self.stream = None
-        
-    def start_voice_recognition(self):
-        text = asr_infer("")
-        self.text_input.setText(text)  # 设置文本输入框为识别的文本
 
     def update_text(self,char_to_add):
         # 获取当前 QTextEdit 的文本
@@ -361,14 +358,14 @@ class Chat(QWidget):
             self.is_listening = True
             self.toggle_button.setText("停止语音识别")
             self.toggle_button.setIcon(QIcon("./icon/stop.png"))  # 切换为停止图标
-            self.label.setText("正在识别语音...")
+            # self.label.setText("正在识别语音...")
             self.start_recording()
         else:
             # Stop listening
             self.is_listening = False
             self.toggle_button.setText("开始语音识别")
             self.toggle_button.setIcon(QIcon("./icon/mic.png"))  # 切换为开始图标
-            self.label.setText("语音识别已停止")
+            # self.label.setText("语音识别已停止")
             if self.stream:
                 self.stream.stop_stream()
                 self.stream.close()
@@ -401,7 +398,7 @@ class Chat(QWidget):
 
 
     def get_asr(self, audio_file):
-        recognized_text = asr_infer(audio_file)
+        recognized_text = asr.asr_infer(audio_file)
         self.text_input.setText(recognized_text)
         
 
