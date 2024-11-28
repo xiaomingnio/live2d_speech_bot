@@ -10,7 +10,6 @@ print(res)
 print("加载offline asr 热词模型成功！")
 
 def asr_infer(input_wav):
-    input_wav = r"./engine/16k16bit.wav"
     res = hotword_asr_inference_pipeline.generate(input=input_wav,
                      batch_size_s=300,
                      hotword="./engine/hotword.txt")

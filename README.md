@@ -1,6 +1,8 @@
 # live2d_speech_bot
 基于live2d-py实现的语音对话机器人
 
+无需gpu即可实现实时语音对话。
+
 ## 编译live2d-py
 参考 https://arkueid.github.io/live2d-py-docs/
 
@@ -18,3 +20,8 @@ https://drive.google.com/file/d/17GrNesqxqLcUlXmxlPaASRCL5dpxxTLV/view?usp=shari
 `
 python main_pyside6.py
 `
+
+## TODO
+✅ 语音识别
+⬜ vad实现，全双工语音对话
+⬜ 大模型多轮对话

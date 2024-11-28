@@ -23,6 +23,7 @@ import time
 from threading import Thread, Event
 import pygame
 import wave
+import pyaudio
 from engine.asr import asr_infer
 
 def validate_wav(file_path):
@@ -249,18 +250,27 @@ class Chat(QWidget):
         self.text_input.setPlaceholderText("请输入文本...")
         self.input_layout.addWidget(self.text_input)
         
-        # 语音识别按钮 (麦克风图标)
-        self.mic_button = QPushButton()
-        self.mic_button.setIcon(QIcon("icon/mic.png"))  # 确保有一个麦克风图标的文件
-        self.mic_button.clicked.connect(self.start_voice_recognition)
-        self.input_layout.addWidget(self.mic_button)
-        
         # 创建发送按钮
         self.send_button = QPushButton("发送", self)
         self.send_button.clicked.connect(self.send_message)
         self.input_layout.addWidget(self.send_button)
         
         self.chat_layout.addLayout(self.input_layout)
+        
+        
+        # 麦克风输入
+        self.mic_layout = QVBoxLayout()
+        self.label = QLabel("点击按钮开始语音识别", self)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.mic_layout.addWidget(self.label)
+        
+        # 语音识别按钮 (麦克风图标)
+        self.toggle_button = QPushButton("开始语音识别", self)
+        self.toggle_button.setIcon(QIcon("./icon/mic.png"))  # 设置按钮图标
+        self.toggle_button.clicked.connect(self.toggle_recognition)
+        self.mic_layout.addWidget(self.toggle_button)
+        
+        self.chat_layout.addLayout(self.mic_layout)
 
     
         self.setLayout(self.chat_layout)
@@ -270,6 +280,11 @@ class Chat(QWidget):
 
         self.a = 0
         # self.resize(700, 1000)
+        
+        # PyAudio setup
+        self.p = pyaudio.PyAudio()
+        self.is_listening = False
+        self.stream = None
         
     def start_voice_recognition(self):
         text = asr_infer("")
@@ -339,6 +354,55 @@ class Chat(QWidget):
 
         # 清空文本输入框
         self.text_input.clear()
+        
+    def toggle_recognition(self):
+        if not self.is_listening:
+            # Start listening for speech
+            self.is_listening = True
+            self.toggle_button.setText("停止语音识别")
+            self.toggle_button.setIcon(QIcon("./icon/stop.png"))  # 切换为停止图标
+            self.label.setText("正在识别语音...")
+            self.start_recording()
+        else:
+            # Stop listening
+            self.is_listening = False
+            self.toggle_button.setText("开始语音识别")
+            self.toggle_button.setIcon(QIcon("./icon/mic.png"))  # 切换为开始图标
+            self.label.setText("语音识别已停止")
+            if self.stream:
+                self.stream.stop_stream()
+                self.stream.close()
+
+    def start_recording(self):
+        self.stream = self.p.open(format=pyaudio.paInt16,
+                                  channels=1,
+                                  rate=16000,
+                                  input=True,
+                                  frames_per_buffer=1024)
+        self.record_thread = Thread(target=self.record_audio)
+        self.record_thread.start()
+
+    def record_audio(self):
+        frames = []
+        while self.is_listening:
+            data = self.stream.read(1024)
+            frames.append(data)
+
+        # Save recorded audio to a .wav file
+        filename = "recorded_audio.wav"
+        wf = wave.open(filename, 'wb')
+        wf.setnchannels(1)
+        wf.setsampwidth(self.p.get_sample_size(pyaudio.paInt16))
+        wf.setframerate(16000)
+        wf.writeframes(b''.join(frames))
+        wf.close()
+        
+        self.get_asr(filename)
+
+
+    def get_asr(self, audio_file):
+        recognized_text = asr_infer(audio_file)
+        self.text_input.setText(recognized_text)
         
 
 if __name__ == "__main__":

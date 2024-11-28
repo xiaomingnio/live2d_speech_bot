@@ -5,3 +5,5 @@ tts_models
 tts_wav
 tmp_tts.wav
 zero_shot_prompt.wav
+tmp
+*.wav
