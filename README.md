@@ -16,6 +16,12 @@ https://drive.google.com/file/d/17GrNesqxqLcUlXmxlPaASRCL5dpxxTLV/view?usp=shari
 
 解压到当前目录，形式为 tts_models，包含 sherpa-onnx-vits-zh-child 和 sherpa-onnx-vits-zh-ll 两个模型
 
+## 下载asr模型
+https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2
+
+mkdir asr_models  
+解压到 asr_models 里面
+
 ## 运行程序
 `
 python main_pyside6.py
