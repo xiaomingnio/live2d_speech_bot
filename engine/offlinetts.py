@@ -59,6 +59,11 @@ class TTS():
         print(f"RTF: {elapsed_seconds:.3f}/{audio_duration:.3f} = {real_time_factor:.3f}")
 
         return audio_file
+    
+if __name__ == "__main__":
+    tts = TTS(base_path=r"tts_models/sherpa-onnx-vits-zh-child")
+    text = r"武汉市长江大桥"
+    tts.infer(text, sid=0, speed=1,audio_file="test.wav")
 
 
 

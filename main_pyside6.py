@@ -187,7 +187,7 @@ class DigitalHuman(QOpenGLWidget):
         self.startTimer(int(1000 / 30))
 
         # 关闭自动眨眼
-        self.model.SetAutoBlinkEnable(True)
+        self.model.SetAutoBlinkEnable(False)
         # 关闭自动呼吸
         self.model.SetAutoBreathEnable(True)
 
@@ -238,7 +238,7 @@ class Chat(QWidget):
         # 设置窗口的透明度
         # self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         
-        self.chat_layout = QHBoxLayout()
+        self.chat_layout = QVBoxLayout()
         # 创建聊天显示区域，包含一个滚动区域
         self.chat_display_area = QTextEdit(self)
         self.chat_display_area.setReadOnly(True)  # 禁止编辑聊天区域
@@ -247,7 +247,7 @@ class Chat(QWidget):
 
         # 创建输入框和按钮
         self.input_layout = QHBoxLayout()
-        self.text_input = QLineEdit(self)
+        self.text_input = QTextEdit(self)
         self.text_input.setPlaceholderText("请输入文本...")
         self.input_layout.addWidget(self.text_input)
         
@@ -260,7 +260,7 @@ class Chat(QWidget):
         
         
         # 麦克风输入
-        self.mic_layout = QVBoxLayout()
+        self.mic_layout = QHBoxLayout()
         # self.label = QLabel("点击按钮开始语音识别", self)
         # self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         # self.mic_layout.addWidget(self.label)
@@ -304,7 +304,7 @@ class Chat(QWidget):
     
     def send_message(self):
         # 获取输入框中的文本
-        input_text = self.text_input.text()
+        input_text = self.text_input.toPlainText()
         self.chat_display_area.append(f"你: {input_text}")
         self.text_input.clear()
 
@@ -399,7 +399,7 @@ class Chat(QWidget):
 
     def get_asr(self, audio_file):
         recognized_text = asr.asr_infer(audio_file)
-        self.text_input.setText(recognized_text)
+        self.text_input.setPlainText(recognized_text)
         
 
 if __name__ == "__main__":
