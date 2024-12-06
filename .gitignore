@@ -9,3 +9,4 @@ zero_shot_prompt.wav
 tmp
 *.wav
 engine/llm.py
+live2d
