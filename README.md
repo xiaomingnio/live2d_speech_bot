@@ -4,6 +4,8 @@
 无需gpu即可实现实时语音对话。
 
 ## Textoon demo演示
+[Textoon  live2d 数字人演示demo-哔哩哔哩](https://b23.tv/S0UjGxG)
+
 [点击这里观看视频](https://github.com/xiaomingnio/live2d_speech_bot/blob/main/assets/textoon_demo.mp4)
 
 ## 安装live2d-py
