@@ -4,10 +4,7 @@
 无需gpu即可实现实时语音对话。
 
 ## Textoon demo演示
-
-<video width="1280" height="960" controls> 
-  <source src="assets\textoon_demo.mp4" type="video/mp4"> 
-</video> 
+[点击这里观看视频](https://github.com/xiaomingnio/live2d_speech_bot/blob/main/assets/textoon_demo.mp4)
 
 ## 安装live2d-py
 参考 https://arkueid.github.io/live2d-py-docs/
@@ -50,6 +47,6 @@ python main_pyside6.py
 
 ## TODO
 ✅ 语音识别  
-✅ 支持textoon生成的模型
+✅ 支持textoon生成的模型  
 ⬜ vad实现，全双工语音对话  
 ⬜ 大模型多轮对话  
