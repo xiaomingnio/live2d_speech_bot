@@ -1,3 +1,4 @@
+import json
 from PySide6.QtGui import QMouseEvent
 # import live2d.v2 as live2d
 import live2d.v3 as live2d
@@ -14,17 +15,15 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor, QIcon
 from live2d.utils.lipsync import WavHandler
 from live2d.v3.params import StandardParams, Parameter
-from engine.offlinetts import TTS
-import engine.llm as llm
-from engine.text_split import split_sentences, contains_punctuation
+from offlinetts import TTS
+import llm
+from text_split import split_sentences, contains_punctuation
 import uuid
 import queue
 import time
 from threading import Thread, Event
 import pygame
 import wave
-import pyaudio
-from engine.asr import ASR
 
 def validate_wav(file_path):
     """验证 WAV 文件的完整性"""
@@ -62,8 +61,7 @@ def validate_wav(file_path):
 
 os.makedirs("./tts_wav", exist_ok=True)
 
-tts = TTS(base_path=r"tts_models/sherpa-onnx-vits-zh-child")
-asr = ASR(type="sherpa_onnx_sense_voice")
+tts = TTS(base_path=r"tts_models/sherpa-onnx-vits-zh-ll")
 RESOURCES_DIRECTORY = "Resources"
 
 
@@ -127,7 +125,7 @@ class DigitalHuman(QOpenGLWidget):
     def __init__(self) -> None:
         super().__init__()
         # 去掉了窗口的边框
-        #self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool)
+        # self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool)
         # 设置窗口的透明度
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
 
@@ -137,7 +135,7 @@ class DigitalHuman(QOpenGLWidget):
         self.setLayout(layout)
 
         self.setWindowTitle("数字人")
-        self.setGeometry(500, 100, 400, 400)  # 固定位置 (500, 100) 和大小 (400, 400)
+        self.setGeometry(500, 500, 400, 400)  # 固定位置 (100, 100) 和大小 (400, 300)
         # self.setGeometry(300, 300, 300, 100)
 
         self.a = 0
@@ -151,7 +149,8 @@ class DigitalHuman(QOpenGLWidget):
         print("=============== run here =================", audio_file)
         def thread_target(audio_file1: str):
             while True:
-                if self.wavHandler.is_finish():
+                # if self.wavHandler.is_finish():
+                if self.wavHandler.pcmData is None or self.wavHandler.lastOffset >= self.wavHandler.numFrames:  # 数据未加载或者数据已经读取完毕
                     print(f"驱动口型：{audio_file1} ")
                     self.wavHandler.Start(audio_file1)
                     break
@@ -168,10 +167,12 @@ class DigitalHuman(QOpenGLWidget):
 
         if live2d.LIVE2D_VERSION == 3:
             live2d.glewInit()
-            live2d.setGLProperties()
+            # live2d.setGLProperties()
 
         # 创建模型
         self.model = live2d.LAppModel()
+
+        model_path = "D:\workspace\live2d_gen\Textoon\outputs\\20250527-210403\\20250527-210403_model"
 
         # 加载模型参数
         if live2d.LIVE2D_VERSION == 2:
@@ -181,15 +182,37 @@ class DigitalHuman(QOpenGLWidget):
             name = "Haru-2"
             # 适用于 3 的模型
             # self.model.LoadModelJson(os.path.join(RESOURCES_DIRECTORY, f"v3_/{name}/{name}.model3.json"))
-            self.model.LoadModelJson(r"Resources/v3_/mark/mark_free_t04.model3.json")
+            # self.model.LoadModelJson(r"Resources/runtime/mark_free_t04.model3.json")
+            self.model.LoadModelJson(os.path.join(model_path, "female_01Arkit_6.model3.json"))
 
         # 以 fps = 30 的频率进行绘图
         self.startTimer(int(1000 / 30))
 
         # 关闭自动眨眼
-        self.model.SetAutoBlinkEnable(False)
+        self.model.SetAutoBlinkEnable(True)
         # 关闭自动呼吸
         self.model.SetAutoBreathEnable(True)
+
+        # 参数设置
+        config_path = os.path.join(model_path, "config.json")
+        with open(config_path, 'r', encoding='utf-8') as f:
+            cfg = json.load(f)
+            setparameter = cfg.get("setparameter", {})
+
+            if setparameter['Param']:
+                self.model.SetParameterValue(StandardParams.Param, setparameter['Param'])
+            if setparameter['Param47']:
+                self.model.SetParameterValue(StandardParams.Param47, setparameter['Param47'])
+            if setparameter['Param48']:
+                self.model.SetParameterValue(StandardParams.Param48, setparameter['Param48'])
+            if setparameter['Param54']:
+                self.model.SetParameterValue(StandardParams.Param54, setparameter['Param54'])
+            if setparameter['Param57']:
+                self.model.SetParameterValue(StandardParams.Param57, setparameter['Param57'])
+            if setparameter['Param59']:
+                self.model.SetParameterValue(StandardParams.Param59, setparameter['Param59'])
+            if setparameter['Param60']:
+                self.model.SetParameterValue(StandardParams.Param60, setparameter['Param60'])
 
     def resizeGL(self, w: int, h: int) -> None:
         if self.model:
@@ -204,8 +227,8 @@ class DigitalHuman(QOpenGLWidget):
 
         if self.wavHandler.Update():
             # 利用 wav 响度更新 嘴部张合
-            self.model.AddParameterValue(
-                StandardParams.ParamMouthOpenY, self.wavHandler.GetRms() * self.lipSyncN
+            self.model.SetParameterValue(
+                StandardParams.ParamJawOpen, self.wavHandler.GetRms() * self.lipSyncN
             )
 
         self.model.Draw()
@@ -213,7 +236,7 @@ class DigitalHuman(QOpenGLWidget):
     def timerEvent(self, a0: QTimerEvent | None) -> None:
 
         if self.a == 0: # 测试一次播放动作和回调函数
-            self.model.StartMotion("TapBody", 0, live2d.MotionPriority.FORCE.value, onFinishMotionHandler=callback)
+            self.model.StartMotion("TapBody", 0, live2d.MotionPriority.FORCE, onFinishMotionHandler=callback)
             self.a += 1
         
         self.update() 
@@ -238,7 +261,7 @@ class Chat(QWidget):
         # 设置窗口的透明度
         # self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         
-        self.chat_layout = QVBoxLayout()
+        self.chat_layout = QHBoxLayout()
         # 创建聊天显示区域，包含一个滚动区域
         self.chat_display_area = QTextEdit(self)
         self.chat_display_area.setReadOnly(True)  # 禁止编辑聊天区域
@@ -247,9 +270,15 @@ class Chat(QWidget):
 
         # 创建输入框和按钮
         self.input_layout = QHBoxLayout()
-        self.text_input = QTextEdit(self)
+        self.text_input = QLineEdit(self)
         self.text_input.setPlaceholderText("请输入文本...")
         self.input_layout.addWidget(self.text_input)
+        
+        # 语音识别按钮 (麦克风图标)
+        self.mic_button = QPushButton()
+        self.mic_button.setIcon(QIcon("icon/mic.png"))  # 确保有一个麦克风图标的文件
+        self.mic_button.clicked.connect(self.start_voice_recognition)
+        self.input_layout.addWidget(self.mic_button)
         
         # 创建发送按钮
         self.send_button = QPushButton("发送", self)
@@ -257,35 +286,19 @@ class Chat(QWidget):
         self.input_layout.addWidget(self.send_button)
         
         self.chat_layout.addLayout(self.input_layout)
-        
-        
-        # 麦克风输入
-        self.mic_layout = QHBoxLayout()
-        # self.label = QLabel("点击按钮开始语音识别", self)
-        # self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        # self.mic_layout.addWidget(self.label)
-        
-        # 语音识别按钮 (麦克风图标)
-        self.toggle_button = QPushButton("开始语音识别", self)
-        self.toggle_button.setIcon(QIcon("./icon/mic.png"))  # 设置按钮图标
-        self.toggle_button.clicked.connect(self.toggle_recognition)
-        self.mic_layout.addWidget(self.toggle_button)
-        
-        self.chat_layout.addLayout(self.mic_layout)
 
     
         self.setLayout(self.chat_layout)
 
         self.setWindowTitle("chat")
-        self.setGeometry(100, 100, 400, 400)  # 固定位置 (100, 100) 和大小 (400, 400)
+        self.setGeometry(100, 100, 400, 400)  # 固定位置 (100, 100) 和大小 (400, 300)
 
         self.a = 0
         # self.resize(700, 1000)
         
-        # PyAudio setup
-        self.p = pyaudio.PyAudio()
-        self.is_listening = False
-        self.stream = None
+    def start_voice_recognition(self):
+        text = "yuyinshibie"
+        self.text_input.setText(text)  # 设置文本输入框为识别的文本
 
     def update_text(self,char_to_add):
         # 获取当前 QTextEdit 的文本
@@ -304,14 +317,14 @@ class Chat(QWidget):
     
     def send_message(self):
         # 获取输入框中的文本
-        input_text = self.text_input.toPlainText()
+        input_text = self.text_input.text()
         self.chat_display_area.append(f"你: {input_text}")
         self.text_input.clear()
 
 
         # 大模型上下文回答 TODO
         self.chat_display_area.append(f"机器人: ")
-        messages = [{'role': 'user','content': input_text + "\n请简要回答，不超过三句话。"},]
+        messages = [{'role': 'user','content': input_text},]
         responds = llm.gpt_35_api_stream(messages)
         text = ''
         split_text = ''
@@ -351,55 +364,6 @@ class Chat(QWidget):
 
         # 清空文本输入框
         self.text_input.clear()
-        
-    def toggle_recognition(self):
-        if not self.is_listening:
-            # Start listening for speech
-            self.is_listening = True
-            self.toggle_button.setText("停止语音识别")
-            self.toggle_button.setIcon(QIcon("./icon/stop.png"))  # 切换为停止图标
-            # self.label.setText("正在识别语音...")
-            self.start_recording()
-        else:
-            # Stop listening
-            self.is_listening = False
-            self.toggle_button.setText("开始语音识别")
-            self.toggle_button.setIcon(QIcon("./icon/mic.png"))  # 切换为开始图标
-            # self.label.setText("语音识别已停止")
-            if self.stream:
-                self.stream.stop_stream()
-                self.stream.close()
-
-    def start_recording(self):
-        self.stream = self.p.open(format=pyaudio.paInt16,
-                                  channels=1,
-                                  rate=16000,
-                                  input=True,
-                                  frames_per_buffer=1024)
-        self.record_thread = Thread(target=self.record_audio)
-        self.record_thread.start()
-
-    def record_audio(self):
-        frames = []
-        while self.is_listening:
-            data = self.stream.read(1024)
-            frames.append(data)
-
-        # Save recorded audio to a .wav file
-        filename = "recorded_audio.wav"
-        wf = wave.open(filename, 'wb')
-        wf.setnchannels(1)
-        wf.setsampwidth(self.p.get_sample_size(pyaudio.paInt16))
-        wf.setframerate(16000)
-        wf.writeframes(b''.join(frames))
-        wf.close()
-        
-        self.get_asr(filename)
-
-
-    def get_asr(self, audio_file):
-        recognized_text = asr.asr_infer(audio_file)
-        self.text_input.setPlainText(recognized_text)
         
 
 if __name__ == "__main__":
